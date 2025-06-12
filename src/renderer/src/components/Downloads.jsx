@@ -9,9 +9,7 @@ import {
   Clock,
   Filter,
   FolderOpen,
-  Play,
-  User,
-  Calendar
+  Play
 } from 'lucide-react'
 
 export default function Downloads({ downloads, onRemove, settings }) {
@@ -146,7 +144,7 @@ export default function Downloads({ downloads, onRemove, settings }) {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+      {/* <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
         <div className="stat bg-base-200 rounded-lg">
           <div className="stat-title">Total</div>
           <div className="stat-value text-primary">{stats.total}</div>
@@ -167,7 +165,7 @@ export default function Downloads({ downloads, onRemove, settings }) {
           <div className="stat-title">Failed</div>
           <div className="stat-value text-error">{stats.failed}</div>
         </div>
-      </div>
+      </div> */}
 
       {/* Filters and Sort */}
       <div className="flex flex-wrap gap-4 items-center">
@@ -247,17 +245,9 @@ export default function Downloads({ downloads, onRemove, settings }) {
                           {download.videoName || 'Unknown Title'}
                         </h4>
                         <div className="flex items-center gap-4 text-sm text-base-content text-opacity-60 mt-1">
-                          <span>{download.quality?.quality || 'Unknown quality'}</span>
-                          {download.videoUploader && (
-                            <div className="flex items-center gap-1">
-                              <User className="w-3 h-3" />
-                              <span>{download.videoUploader}</span>
-                            </div>
-                          )}
-                          <div className="flex items-center gap-1">
-                            <Calendar className="w-3 h-3" />
-                            <span>{formatDate(download.addedAt)}</span>
-                          </div>
+                          <span className="font-semibold opacity-70">
+                            {download.quality?.quality || 'Unknown quality'}
+                          </span>
                         </div>
                       </div>
 
