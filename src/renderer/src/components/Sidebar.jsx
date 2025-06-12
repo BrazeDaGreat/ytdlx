@@ -1,6 +1,7 @@
 /* eslint-disable react/prop-types */
 
 import { Home, Download, Settings, Activity, Folders } from 'lucide-react'
+import VERSION from '../../../lib/VERSION'
 
 export default function Sidebar({ currentView, onViewChange, downloadCount, activeDownloads }) {
   const menuItems = [
@@ -72,7 +73,7 @@ function YTDLX() {
       </div>
       <div className="flex flex-col">
         <span className="font-semibold">YTDL-X</span>
-        <span className="text-xs opacity-60">v0.1.0-alpha</span>
+        <span className="text-xs opacity-60">{VERSION}</span>
       </div>
     </div>
   )
