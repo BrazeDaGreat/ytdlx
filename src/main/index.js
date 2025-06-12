@@ -66,30 +66,6 @@ app.whenReady().then(() => {
     return result.canceled ? null : result.filePaths[0]
   })
 
-  // Config IPC handlers
-  ipcMain.handle('config:getSettings', () => configStore.getSettings())
-  ipcMain.handle('config:setSettings', (_, settings) => configStore.setSettings(settings))
-  ipcMain.handle('config:getDownloads', () => configStore.getDownloads())
-  ipcMain.handle('config:addDownload', (_, download) => configStore.addDownload(download))
-  ipcMain.handle('config:updateDownload', (_, id, updates) =>
-    configStore.updateDownload(id, updates)
-  )
-  ipcMain.handle('config:removeDownload', (_, id) => configStore.removeDownload(id))
-  ipcMain.handle('config:clearCompletedDownloads', () => configStore.clearCompletedDownloads())
-  ipcMain.handle('config:clearAllDownloads', () => configStore.clearAllDownloads())
-
-  // File system IPC handlers
-  ipcMain.handle('open:path', (_, path) => {
-    shell.openPath(path)
-  })
-
-  ipcMain.handle('select:folder', async () => {
-    const result = await dialog.showOpenDialog({
-      properties: ['openDirectory']
-    })
-    return result.canceled ? null : result.filePaths[0]
-  })
-
   ipcMain.on('ping', () => console.log('pong'))
 
   createWindow()
