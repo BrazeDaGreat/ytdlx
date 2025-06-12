@@ -379,7 +379,7 @@ class DownloadInstance extends EventEmitter {
       await fs.mkdir(this.downloadPath, { recursive: true })
     }
 
-    // Smart format selection strategy
+    // Smart format selection strategy with AI-dub workaround
     let formatId
 
     if (this.quality.isNativeCombined) {
@@ -387,13 +387,14 @@ class DownloadInstance extends EventEmitter {
       formatId = this.quality.formatId
       console.log(`Using native combined format: ${this.quality.quality}`)
     } else if (this.quality.needsMerging && this.quality.bestAudioFormat) {
-      // Use specific video + best audio with fallbacks
-      formatId = `${this.quality.formatId}+${this.quality.bestAudioFormat}/bestvideo[height<=${this.quality.height}]+bestaudio/best[height<=${this.quality.height}]`
-      console.log(`Merging ${this.quality.quality} video with audio (requires ffmpeg)`)
+      // Use specific video + best audio with AI-dub workaround
+      // Prioritize original audio track over AI-dub
+      formatId = `${this.quality.formatId}+(ba[format_note*=original]/ba)/bestvideo[height<=${this.quality.height}]+(ba[format_note*=original]/ba)/best[height<=${this.quality.height}]`
+      console.log(`Merging ${this.quality.quality} video with original audio (requires ffmpeg)`)
     } else {
-      // Fallback to best available for this height
-      formatId = `best[height<=${this.quality.height}]`
-      console.log(`Using best available format for ${this.quality.quality}`)
+      // Fallback to best available for this height with original audio preference
+      formatId = `(bv[height<=${this.quality.height}]+(ba[format_note*=original]/ba))/best[height<=${this.quality.height}]`
+      console.log(`Using best available format for ${this.quality.quality} with original audio`)
     }
 
     const filename = `${this.videoData.name.replace(/[<>:"/\\|?*]/g, '_')}.%(ext)s`

@@ -8,6 +8,7 @@ import {
   Info,
   Clipboard
 } from 'lucide-react'
+import VERSION from '../../../lib/VERSION'
 
 export default function Settings({ settings, onSettingsChange }) {
   const [localSettings, setLocalSettings] = useState(settings)
@@ -320,7 +321,7 @@ export default function Settings({ settings, onSettingsChange }) {
               <div className="flex items-start gap-3">
                 <Info className="w-5 h-5 text-primary mt-0.5" />
                 <div>
-                  <h4 className="font-medium">YTDL-X v0.1.0-alpha</h4>
+                  <h4 className="font-medium">YTDL-X {VERSION}</h4>
                   <p className="text-sm text-base-content text-opacity-60 mt-1">
                     A modern YouTube downloader built with React and yt-dlp.
                   </p>

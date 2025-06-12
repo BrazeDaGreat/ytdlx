@@ -9,7 +9,8 @@ import {
   Clock,
   Filter,
   FolderOpen,
-  Play
+  Play,
+  ArrowDownWideNarrow
 } from 'lucide-react'
 
 export default function Downloads({ downloads, onRemove, settings }) {
@@ -185,7 +186,7 @@ export default function Downloads({ downloads, onRemove, settings }) {
         </div>
 
         <div className="flex items-center gap-2">
-          <span className="text-sm">Sort by:</span>
+          <ArrowDownWideNarrow className="w-4 h-4" />
           <select
             className="select select-bordered select-sm"
             value={sortBy}
