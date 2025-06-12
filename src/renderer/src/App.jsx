@@ -2,8 +2,8 @@ import { useState, useEffect } from 'react'
 import Sidebar from './components/Sidebar'
 import VideoInput from './components/VideoInput'
 import VideoDisplay from './components/VideoDisplay'
-import DownloadQueue from './components/DownloadQueue'
-import BulkDownload from './components/BulkDownload'
+import QueueManager from './components/QueueManager'
+import Downloads from './components/Downloads'
 import Settings from './components/Settings'
 
 export default function App() {
@@ -14,44 +14,77 @@ export default function App() {
   const [settings, setSettings] = useState({
     downloadPath: './downloads/',
     maxConcurrent: 3,
-    defaultQuality: 'best'
+    defaultQuality: 'best',
+    autoClearCompleted: false,
+    showNotifications: true,
+    embedSubtitles: false,
+    downloadThumbnails: false
   })
 
+  // Load settings and downloads on startup
   useEffect(() => {
-    // Initialize download queue
+    const loadConfig = async () => {
+      try {
+        const savedSettings = await window.api.config.getSettings()
+        const savedDownloads = await window.api.config.getDownloads()
+
+        setSettings(savedSettings)
+        setDownloads(savedDownloads)
+      } catch (error) {
+        console.error('Failed to load config:', error)
+      }
+    }
+
+    loadConfig()
+  }, [])
+
+  // Initialize download queue when settings change
+  useEffect(() => {
     const queue = new window.api.DownloadQueue(settings.downloadPath, settings.maxConcurrent)
 
-    // Setup queue event handlers
     queue.onProgress((video, percent) => {
+      const updateData = { progress: percent, status: 'downloading' }
       setDownloads((prev) =>
-        prev.map((d) =>
-          d.video.url === video.url ? { ...d, progress: percent, status: 'downloading' } : d
-        )
+        prev.map((d) => (d.videoUrl === video.url ? { ...d, ...updateData } : d))
       )
+      // Update persistent storage
+      const download = downloads.find((d) => d.videoUrl === video.url)
+      if (download) {
+        window.api.config.updateDownload(download.id, updateData)
+      }
     })
 
     queue.onVideoComplete((video, filepath) => {
+      const updateData = { progress: 100, status: 'completed', filepath, completedAt: new Date() }
       setDownloads((prev) =>
-        prev.map((d) =>
-          d.video.url === video.url ? { ...d, progress: 100, status: 'completed', filepath } : d
-        )
+        prev.map((d) => (d.videoUrl === video.url ? { ...d, ...updateData } : d))
       )
+      // Update persistent storage
+      const download = downloads.find((d) => d.videoUrl === video.url)
+      if (download) {
+        window.api.config.updateDownload(download.id, updateData)
+      }
     })
 
     queue.onError((video, error) => {
+      const updateData = { status: 'error', error: error.message }
       setDownloads((prev) =>
-        prev.map((d) =>
-          d.video.url === video.url ? { ...d, status: 'error', error: error.message } : d
-        )
+        prev.map((d) => (d.videoUrl === video.url ? { ...d, ...updateData } : d))
       )
-    })
-
-    queue.onQueueComplete((stats) => {
-      console.log('Queue completed:', stats)
+      // Update persistent storage
+      const download = downloads.find((d) => d.videoUrl === video.url)
+      if (download) {
+        window.api.config.updateDownload(download.id, updateData)
+      }
     })
 
     setDownloadQueue(queue)
   }, [settings.downloadPath, settings.maxConcurrent])
+
+  const handleSettingsChange = async (newSettings) => {
+    setSettings(newSettings)
+    await window.api.config.setSettings(newSettings)
+  }
 
   const addToQueue = async (video, quality) => {
     try {
@@ -59,12 +92,17 @@ export default function App() {
       const newDownload = {
         id,
         video,
+        videoUrl: video.url,
+        videoName: video.name,
+        videoUploader: video.uploader,
+        videoThumbnail: video.thumbnail,
         quality,
         progress: 0,
         status: 'queued',
         addedAt: new Date()
       }
       setDownloads((prev) => [...prev, newDownload])
+      await window.api.config.addDownload(newDownload)
     } catch (error) {
       console.error('Failed to add to queue:', error)
     }
@@ -73,11 +111,14 @@ export default function App() {
   const downloadSingle = async (video, quality) => {
     try {
       const download = await video.download(quality, settings.downloadPath)
-
       const downloadId = Date.now().toString()
       const newDownload = {
         id: downloadId,
         video,
+        videoUrl: video.url,
+        videoName: video.name,
+        videoUploader: video.uploader,
+        videoThumbnail: video.thumbnail,
         quality,
         progress: 0,
         status: 'downloading',
@@ -86,29 +127,24 @@ export default function App() {
       }
 
       setDownloads((prev) => [...prev, newDownload])
+      await window.api.config.addDownload(newDownload)
 
       download.onProgress((percent) => {
-        setDownloads((prev) =>
-          prev.map((d) =>
-            d.id === downloadId ? { ...d, progress: percent, status: 'downloading' } : d
-          )
-        )
+        const updateData = { progress: percent, status: 'downloading' }
+        setDownloads((prev) => prev.map((d) => (d.id === downloadId ? { ...d, ...updateData } : d)))
+        window.api.config.updateDownload(downloadId, updateData)
       })
 
       download.onComplete((filepath) => {
-        setDownloads((prev) =>
-          prev.map((d) =>
-            d.id === downloadId ? { ...d, progress: 100, status: 'completed', filepath } : d
-          )
-        )
+        const updateData = { progress: 100, status: 'completed', filepath, completedAt: new Date() }
+        setDownloads((prev) => prev.map((d) => (d.id === downloadId ? { ...d, ...updateData } : d)))
+        window.api.config.updateDownload(downloadId, updateData)
       })
 
       download.onError((error) => {
-        setDownloads((prev) =>
-          prev.map((d) =>
-            d.id === downloadId ? { ...d, status: 'error', error: error.message } : d
-          )
-        )
+        const updateData = { status: 'error', error: error.message }
+        setDownloads((prev) => prev.map((d) => (d.id === downloadId ? { ...d, ...updateData } : d)))
+        window.api.config.updateDownload(downloadId, updateData)
       })
 
       download.start()
@@ -117,24 +153,20 @@ export default function App() {
     }
   }
 
-  const removeFromQueue = (id) => {
+  const removeDownload = async (id) => {
     const download = downloads.find((d) => d.id === id)
     if (download) {
-      // If it's a queue download, remove from queue
       if (!download.downloadInstance && downloadQueue.remove(id)) {
         setDownloads((prev) => prev.filter((d) => d.id !== id))
-      }
-      // If it's a direct download, cancel if running and remove
-      else if (download.downloadInstance) {
+      } else if (download.downloadInstance) {
         if (download.status === 'downloading') {
           download.downloadInstance.cancel()
         }
         setDownloads((prev) => prev.filter((d) => d.id !== id))
-      }
-      // Fallback: just remove from state
-      else {
+      } else {
         setDownloads((prev) => prev.filter((d) => d.id !== id))
       }
+      await window.api.config.removeDownload(id)
     }
   }
 
@@ -158,14 +190,11 @@ export default function App() {
           </div>
         )
       case 'queue':
-        return (
-          <div className="space-y-6">
-            <BulkDownload onAddToQueue={addToQueue} />
-            <DownloadQueue downloads={downloads} onRemove={removeFromQueue} queue={downloadQueue} />
-          </div>
-        )
+        return <QueueManager onAddToQueue={addToQueue} settings={settings} />
+      case 'downloads':
+        return <Downloads downloads={downloads} onRemove={removeDownload} settings={settings} />
       case 'settings':
-        return <Settings settings={settings} onSettingsChange={setSettings} />
+        return <Settings settings={settings} onSettingsChange={handleSettingsChange} />
       default:
         return <div>Unknown view</div>
     }

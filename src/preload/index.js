@@ -1,19 +1,25 @@
-import { contextBridge } from 'electron'
+import { contextBridge, ipcRenderer } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
 import { DownloadInstance, DownloadQueue, VideoData } from '../lib/ytdlp-wrapper.cjs'
 
 const api = {
   VideoData,
   DownloadQueue,
-  DownloadInstance
+  DownloadInstance,
+  config: {
+    getSettings: () => ipcRenderer.invoke('config:getSettings'),
+    setSettings: (settings) => ipcRenderer.invoke('config:setSettings', settings),
+    getDownloads: () => ipcRenderer.invoke('config:getDownloads'),
+    addDownload: (download) => ipcRenderer.invoke('config:addDownload', download),
+    updateDownload: (id, updates) => ipcRenderer.invoke('config:updateDownload', id, updates),
+    removeDownload: (id) => ipcRenderer.invoke('config:removeDownload', id),
+    clearCompletedDownloads: () => ipcRenderer.invoke('config:clearCompletedDownloads'),
+    clearAllDownloads: () => ipcRenderer.invoke('config:clearAllDownloads')
+  },
+  openPath: (path) => ipcRenderer.invoke('open:path', path),
+  selectFolder: () => ipcRenderer.invoke('select:folder')
 }
 
-// Custom APIs for renderer
-// const api = { VideoData, DownloadInstance, DownloadQueue }
-
-// Use `contextBridge` APIs to expose Electron APIs to
-// renderer only if context isolation is enabled, otherwise
-// just add to the DOM global.
 if (process.contextIsolated) {
   try {
     contextBridge.exposeInMainWorld('electron', electronAPI)
